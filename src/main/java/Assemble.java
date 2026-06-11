@@ -1,6 +1,7 @@
 import domain.BrakeSystem;
 import domain.CarSpec;
 import domain.CarType;
+import domain.CompatibilityValidator;
 import domain.Engine;
 import domain.SteeringSystem;
 import ui.ConsoleRenderer;
@@ -14,6 +15,7 @@ public class Assemble {
     private static final int SteeringSystem_Q = 3;
     private static final int Run_Test         = 4;
 
+    private static final CompatibilityValidator VALIDATOR = new CompatibilityValidator();
     private static CarSpec spec = new CarSpec();
 
     public static void main(String[] args) {
@@ -156,17 +158,8 @@ public class Assemble {
         ConsoleRenderer.showSteeringSystemSelected(spec.getSteeringSystem().getLabel());
     }
 
-    private static boolean isValidCheck() {
-        if (spec.getCarType() == CarType.SEDAN  && spec.getBrakeSystem() == BrakeSystem.CONTINENTAL) return false;
-        if (spec.getCarType() == CarType.SUV    && spec.getEngine() == Engine.TOYOTA)                return false;
-        if (spec.getCarType() == CarType.TRUCK  && spec.getEngine() == Engine.WIA)                   return false;
-        if (spec.getCarType() == CarType.TRUCK  && spec.getBrakeSystem() == BrakeSystem.MANDO)       return false;
-        if (spec.getBrakeSystem() == BrakeSystem.BOSCH && spec.getSteeringSystem() != SteeringSystem.BOSCH) return false;
-        return true;
-    }
-
     private static void runProducedCar() {
-        if (!isValidCheck()) {
+        if (!VALIDATOR.isValid(spec)) {
             ConsoleRenderer.showCannotRun();
             return;
         }
@@ -178,19 +171,8 @@ public class Assemble {
     }
 
     private static void testProducedCar() {
-        if (spec.getCarType() == CarType.SEDAN && spec.getBrakeSystem() == BrakeSystem.CONTINENTAL) {
-            ConsoleRenderer.showTestFail("Sedan에는 Continental제동장치 사용 불가");
-        } else if (spec.getCarType() == CarType.SUV && spec.getEngine() == Engine.TOYOTA) {
-            ConsoleRenderer.showTestFail("SUV에는 TOYOTA엔진 사용 불가");
-        } else if (spec.getCarType() == CarType.TRUCK && spec.getEngine() == Engine.WIA) {
-            ConsoleRenderer.showTestFail("Truck에는 WIA엔진 사용 불가");
-        } else if (spec.getCarType() == CarType.TRUCK && spec.getBrakeSystem() == BrakeSystem.MANDO) {
-            ConsoleRenderer.showTestFail("Truck에는 Mando제동장치 사용 불가");
-        } else if (spec.getBrakeSystem() == BrakeSystem.BOSCH && spec.getSteeringSystem() != SteeringSystem.BOSCH) {
-            ConsoleRenderer.showTestFail("Bosch제동장치에는 Bosch조향장치 이외 사용 불가");
-        } else {
-            ConsoleRenderer.showTestPass();
-        }
+        VALIDATOR.findViolation(spec)
+                .ifPresentOrElse(ConsoleRenderer::showTestFail, ConsoleRenderer::showTestPass);
     }
 
     private static void delay(int ms) {

@@ -79,10 +79,6 @@ class AssembleTest {
         return (boolean) call("isValidRange", new Class[]{int.class, int.class}, step, ans);
     }
 
-    private boolean isValidCheck() throws Exception {
-        return (boolean) call("isValidCheck", new Class[]{});
-    }
-
     private String out() {
         return outContent.toString();
     }
@@ -305,65 +301,6 @@ class AssembleTest {
     void selectSteeringSystem_mobis_printsMobis() throws Exception {
         call("selectSteeringSystem", new Class[]{int.class}, 2);
         assertTrue(out().contains("MOBIS"));
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // isValidCheck — 부품 호환 규칙 5가지 + && 단락평가 분기
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    @Test @Order(80)
-    void isValidCheck_sedanWithContinental_returnsFalse() throws Exception {
-        setSpec(CarType.SEDAN, Engine.GM, BrakeSystem.CONTINENTAL, SteeringSystem.BOSCH);
-        assertFalse(isValidCheck());
-    }
-
-    @Test @Order(81)
-    void isValidCheck_suvWithToyota_returnsFalse() throws Exception {
-        setSpec(CarType.SUV, Engine.TOYOTA, BrakeSystem.MANDO, SteeringSystem.BOSCH);
-        assertFalse(isValidCheck());
-    }
-
-    @Test @Order(82)
-    void isValidCheck_truckWithWia_returnsFalse() throws Exception {
-        setSpec(CarType.TRUCK, Engine.WIA, BrakeSystem.CONTINENTAL, SteeringSystem.BOSCH);
-        assertFalse(isValidCheck());
-    }
-
-    @Test @Order(83)
-    void isValidCheck_truckWithMando_returnsFalse() throws Exception {
-        setSpec(CarType.TRUCK, Engine.GM, BrakeSystem.MANDO, SteeringSystem.BOSCH);
-        assertFalse(isValidCheck());
-    }
-
-    @Test @Order(84)
-    void isValidCheck_boschBrakeWithMobisSteering_returnsFalse() throws Exception {
-        setSpec(CarType.SEDAN, Engine.GM, BrakeSystem.BOSCH, SteeringSystem.MOBIS);
-        assertFalse(isValidCheck());
-    }
-
-    @Test @Order(85)
-    void isValidCheck_validCombination_returnsTrue() throws Exception {
-        setSpec(CarType.SEDAN, Engine.GM, BrakeSystem.MANDO, SteeringSystem.BOSCH);
-        assertTrue(isValidCheck());
-    }
-
-    // 누락 branch: && 단락평가에서 첫 조건 true, 두 번째 조건 false 경로들
-    @Test @Order(86)
-    void isValidCheck_suvWithNonToyota_returnsTrue() throws Exception {
-        setSpec(CarType.SUV, Engine.GM, BrakeSystem.MANDO, SteeringSystem.BOSCH);
-        assertTrue(isValidCheck());
-    }
-
-    @Test @Order(87)
-    void isValidCheck_truckWithNonMandoNonWia_returnsTrue() throws Exception {
-        setSpec(CarType.TRUCK, Engine.GM, BrakeSystem.CONTINENTAL, SteeringSystem.BOSCH);
-        assertTrue(isValidCheck());
-    }
-
-    @Test @Order(88)
-    void isValidCheck_boschBrakeWithBoschSteering_returnsTrue() throws Exception {
-        setSpec(CarType.SEDAN, Engine.GM, BrakeSystem.BOSCH, SteeringSystem.BOSCH);
-        assertTrue(isValidCheck());
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
