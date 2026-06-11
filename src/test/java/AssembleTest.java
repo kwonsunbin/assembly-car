@@ -1,39 +1,38 @@
+import domain.BrakeSystem;
+import domain.CarSpec;
+import domain.CarType;
+import domain.Engine;
+import domain.SteeringSystem;
 import org.junit.jupiter.api.*;
 
 import java.io.*;
 import java.lang.reflect.*;
-import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
-
-@SuppressWarnings("JavaReflectionInvocation")
 
 /**
  * Characterization test suite for Assemble.java (legacy code).
  * All private static methods are accessed via reflection.
- * Static field `stack` is reset before each test to ensure isolation.
+ * Static field `spec` (CarSpec) is reset before each test for isolation.
  *
- * Note: one structural dead branch exists in main() —
- *   `else if (step > CarType_Q)` false-path when step==CarType_Q with answer==0
- *   is unreachable because isValidRange() blocks answer==0 at CarType_Q.
- *   This is a pre-existing bug in the legacy code, not a test gap.
+ * Note: 4 structural dead branches remain in main() and cannot be covered:
+ *   - switch(step) default (step outside 0–4): unreachable through normal flow
+ *   - else if (step > CarType_Q) false-path: isValidRange blocks answer==0 at step==0
+ *   - else if (answer == 2) false-path at Run_Test: only 1 or 2 reach this point
+ * These are pre-existing dead code in the legacy code, not a test gap.
  */
+@SuppressWarnings("JavaReflectionInvocation")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class AssembleTest {
 
-    // ── mirrors of private constants ──────────────────────────────────────────
-    private static final int CarType_Q       = 0;
-    private static final int Engine_Q        = 1;
-    private static final int BrakeSystem_Q   = 2;
+    // ── step 상수 (isValidRange 테스트용) ─────────────────────────────────────
+    private static final int CarType_Q        = 0;
+    private static final int Engine_Q         = 1;
+    private static final int BrakeSystem_Q    = 2;
     private static final int SteeringSystem_Q = 3;
-    private static final int Run_Test        = 4;
+    private static final int Run_Test         = 4;
 
-    private static final int SEDAN = 1, SUV = 2, TRUCK = 3;
-    private static final int GM = 1, TOYOTA = 2, WIA = 3;
-    private static final int MANDO = 1, CONTINENTAL = 2, BOSCH_B = 3;
-    private static final int BOSCH_S = 1, MOBIS = 2;
-
-    // ── I/O capture ──────────────────────────────────────────────────────────
+    // ── I/O 캡처 ──────────────────────────────────────────────────────────────
     private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
     private final PrintStream originalOut = System.out;
     private final InputStream  originalIn  = System.in;
@@ -41,7 +40,7 @@ class AssembleTest {
     @BeforeEach
     void setUp() throws Exception {
         System.setOut(new PrintStream(outContent));
-        resetStack();
+        resetSpec();
     }
 
     @AfterEach
@@ -50,22 +49,24 @@ class AssembleTest {
         System.setIn(originalIn);
     }
 
-    // ── helpers ───────────────────────────────────────────────────────────────
+    // ── 헬퍼 ─────────────────────────────────────────────────────────────────
 
-    private void resetStack() throws Exception {
-        Field f = Assemble.class.getDeclaredField("stack");
+    private void resetSpec() throws Exception {
+        Field f = Assemble.class.getDeclaredField("spec");
         f.setAccessible(true);
-        Arrays.fill((int[]) f.get(null), 0);
+        f.set(null, new CarSpec());
     }
 
-    private void setStack(int carType, int engine, int brake, int steering) throws Exception {
-        Field f = Assemble.class.getDeclaredField("stack");
+    private void setSpec(CarType carType, Engine engine,
+                         BrakeSystem brakeSystem, SteeringSystem steeringSystem) throws Exception {
+        Field f = Assemble.class.getDeclaredField("spec");
         f.setAccessible(true);
-        int[] s = (int[]) f.get(null);
-        s[0] = carType;
-        s[1] = engine;
-        s[2] = brake;
-        s[3] = steering;
+        CarSpec s = new CarSpec();
+        s.setCarType(carType);
+        s.setEngine(engine);
+        s.setBrakeSystem(brakeSystem);
+        s.setSteeringSystem(steeringSystem);
+        f.set(null, s);
     }
 
     private Object call(String name, Class<?>[] types, Object... args) throws Exception {
@@ -278,7 +279,7 @@ class AssembleTest {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // selectXxx — 선택 시 stack에 값이 저장되고 메시지가 출력되는지 확인
+    // selectXxx — 선택 시 spec에 값이 저장되고 메시지가 출력되는지 확인
     // ═══════════════════════════════════════════════════════════════════════════
 
     @Test @Order(60)
@@ -354,65 +355,61 @@ class AssembleTest {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // isValidCheck — 부품 호환 규칙 5가지 + 정상 조합
+    // isValidCheck — 부품 호환 규칙 5가지 + && 단락평가 분기
     // ═══════════════════════════════════════════════════════════════════════════
 
     @Test @Order(80)
     void isValidCheck_sedanWithContinental_returnsFalse() throws Exception {
-        setStack(SEDAN, GM, CONTINENTAL, BOSCH_S);
+        setSpec(CarType.SEDAN, Engine.GM, BrakeSystem.CONTINENTAL, SteeringSystem.BOSCH);
         assertFalse(isValidCheck());
     }
 
     @Test @Order(81)
     void isValidCheck_suvWithToyota_returnsFalse() throws Exception {
-        setStack(SUV, TOYOTA, MANDO, BOSCH_S);
+        setSpec(CarType.SUV, Engine.TOYOTA, BrakeSystem.MANDO, SteeringSystem.BOSCH);
         assertFalse(isValidCheck());
     }
 
     @Test @Order(82)
     void isValidCheck_truckWithWia_returnsFalse() throws Exception {
-        setStack(TRUCK, WIA, CONTINENTAL, BOSCH_S);
+        setSpec(CarType.TRUCK, Engine.WIA, BrakeSystem.CONTINENTAL, SteeringSystem.BOSCH);
         assertFalse(isValidCheck());
     }
 
     @Test @Order(83)
     void isValidCheck_truckWithMando_returnsFalse() throws Exception {
-        setStack(TRUCK, GM, MANDO, BOSCH_S);
+        setSpec(CarType.TRUCK, Engine.GM, BrakeSystem.MANDO, SteeringSystem.BOSCH);
         assertFalse(isValidCheck());
     }
 
     @Test @Order(84)
     void isValidCheck_boschBrakeWithMobisSteering_returnsFalse() throws Exception {
-        setStack(SEDAN, GM, BOSCH_B, MOBIS);
+        setSpec(CarType.SEDAN, Engine.GM, BrakeSystem.BOSCH, SteeringSystem.MOBIS);
         assertFalse(isValidCheck());
     }
 
     @Test @Order(85)
     void isValidCheck_validCombination_returnsTrue() throws Exception {
-        setStack(SEDAN, GM, MANDO, BOSCH_S);
+        setSpec(CarType.SEDAN, Engine.GM, BrakeSystem.MANDO, SteeringSystem.BOSCH);
         assertTrue(isValidCheck());
     }
 
     // 누락 branch: && 단락평가에서 첫 조건 true, 두 번째 조건 false 경로들
     @Test @Order(86)
     void isValidCheck_suvWithNonToyota_returnsTrue() throws Exception {
-        // SUV(true) + GM(≠TOYOTA → false): line 214 두 번째 조건 false 경로
-        setStack(SUV, GM, MANDO, BOSCH_S);
+        setSpec(CarType.SUV, Engine.GM, BrakeSystem.MANDO, SteeringSystem.BOSCH);
         assertTrue(isValidCheck());
     }
 
     @Test @Order(87)
     void isValidCheck_truckWithNonMandoNonWia_returnsTrue() throws Exception {
-        // TRUCK(true) + CONTINENTAL(≠MANDO → false): line 216 두 번째 조건 false 경로
-        // WIA가 아닌 engine 사용으로 line 215도 통과
-        setStack(TRUCK, GM, CONTINENTAL, BOSCH_S);
+        setSpec(CarType.TRUCK, Engine.GM, BrakeSystem.CONTINENTAL, SteeringSystem.BOSCH);
         assertTrue(isValidCheck());
     }
 
     @Test @Order(88)
     void isValidCheck_boschBrakeWithBoschSteering_returnsTrue() throws Exception {
-        // BOSCH_B(true) + BOSCH_S(1!=1 → false): line 217 두 번째 조건 false 경로
-        setStack(SEDAN, GM, BOSCH_B, BOSCH_S);
+        setSpec(CarType.SEDAN, Engine.GM, BrakeSystem.BOSCH, SteeringSystem.BOSCH);
         assertTrue(isValidCheck());
     }
 
@@ -422,22 +419,21 @@ class AssembleTest {
 
     @Test @Order(90)
     void runProducedCar_invalidCombo_printsCannotRun() throws Exception {
-        setStack(SEDAN, GM, CONTINENTAL, BOSCH_S); // isValidCheck() = false
+        setSpec(CarType.SEDAN, Engine.GM, BrakeSystem.CONTINENTAL, SteeringSystem.BOSCH);
         call("runProducedCar", new Class[]{});
         assertTrue(out().contains("동작되지 않습니다"));
     }
 
     @Test @Order(91)
     void runProducedCar_brokenEngine_printsBrokenMessage() throws Exception {
-        // engine=4(broken), 나머지는 valid combo
-        setStack(SEDAN, 4, MANDO, BOSCH_S);
+        setSpec(CarType.SEDAN, Engine.BROKEN, BrakeSystem.MANDO, SteeringSystem.BOSCH);
         call("runProducedCar", new Class[]{});
         assertTrue(out().contains("고장나있습니다"));
     }
 
     @Test @Order(92)
-    void runProducedCar_validCombo_mandobrake_printsCarDetails() throws Exception {
-        setStack(SEDAN, GM, MANDO, BOSCH_S);
+    void runProducedCar_validCombo_mandoBrake_printsCarDetails() throws Exception {
+        setSpec(CarType.SEDAN, Engine.GM, BrakeSystem.MANDO, SteeringSystem.BOSCH);
         call("runProducedCar", new Class[]{});
         assertTrue(out().contains("동작됩니다"));
         assertTrue(out().contains("Mando"));
@@ -445,35 +441,32 @@ class AssembleTest {
 
     @Test @Order(93)
     void runProducedCar_continentalBrake_printsContinental() throws Exception {
-        // SUV + GM + CONTINENTAL 은 isValidCheck() 통과 가능
-        setStack(SUV, GM, CONTINENTAL, BOSCH_S);
+        setSpec(CarType.SUV, Engine.GM, BrakeSystem.CONTINENTAL, SteeringSystem.BOSCH);
         call("runProducedCar", new Class[]{});
         assertTrue(out().contains("Continental"));
     }
 
     @Test @Order(94)
     void runProducedCar_boschBrake_printsBosch() throws Exception {
-        // BOSCH_B + BOSCH_S 조합은 유효 (line 217: BOSCH_B=true, BOSCH_S=BOSCH_S → false)
-        setStack(SEDAN, GM, BOSCH_B, BOSCH_S);
+        setSpec(CarType.SEDAN, Engine.GM, BrakeSystem.BOSCH, SteeringSystem.BOSCH);
         call("runProducedCar", new Class[]{});
         assertTrue(out().contains("Bosch"));
     }
 
     @Test @Order(95)
     void runProducedCar_mobisSteering_printsMobis() throws Exception {
-        // MANDO brake + MOBIS steering 은 유효 (BOSCH_B 아니므로 line 217 false)
-        setStack(SEDAN, GM, MANDO, MOBIS);
+        setSpec(CarType.SEDAN, Engine.GM, BrakeSystem.MANDO, SteeringSystem.MOBIS);
         call("runProducedCar", new Class[]{});
         assertTrue(out().contains("Mobis"));
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // testProducedCar — 5가지 실패 케이스 + PASS
+    // testProducedCar — 5가지 실패 케이스 + && 분기 포함 PASS 케이스
     // ═══════════════════════════════════════════════════════════════════════════
 
     @Test @Order(100)
     void testProducedCar_sedanWithContinental_printsFail() throws Exception {
-        setStack(SEDAN, GM, CONTINENTAL, BOSCH_S);
+        setSpec(CarType.SEDAN, Engine.GM, BrakeSystem.CONTINENTAL, SteeringSystem.BOSCH);
         call("testProducedCar", new Class[]{});
         assertTrue(out().contains("FAIL"));
         assertTrue(out().contains("Continental"));
@@ -481,7 +474,7 @@ class AssembleTest {
 
     @Test @Order(101)
     void testProducedCar_suvWithToyota_printsFail() throws Exception {
-        setStack(SUV, TOYOTA, MANDO, BOSCH_S);
+        setSpec(CarType.SUV, Engine.TOYOTA, BrakeSystem.MANDO, SteeringSystem.BOSCH);
         call("testProducedCar", new Class[]{});
         assertTrue(out().contains("FAIL"));
         assertTrue(out().contains("TOYOTA"));
@@ -489,7 +482,7 @@ class AssembleTest {
 
     @Test @Order(102)
     void testProducedCar_truckWithWia_printsFail() throws Exception {
-        setStack(TRUCK, WIA, CONTINENTAL, BOSCH_S);
+        setSpec(CarType.TRUCK, Engine.WIA, BrakeSystem.CONTINENTAL, SteeringSystem.BOSCH);
         call("testProducedCar", new Class[]{});
         assertTrue(out().contains("FAIL"));
         assertTrue(out().contains("WIA"));
@@ -497,8 +490,7 @@ class AssembleTest {
 
     @Test @Order(103)
     void testProducedCar_truckWithMando_printsFail() throws Exception {
-        // WIA 조건이 먼저 걸리지 않도록 engine=GM
-        setStack(TRUCK, GM, MANDO, BOSCH_S);
+        setSpec(CarType.TRUCK, Engine.GM, BrakeSystem.MANDO, SteeringSystem.BOSCH);
         call("testProducedCar", new Class[]{});
         assertTrue(out().contains("FAIL"));
         assertTrue(out().contains("Mando"));
@@ -506,8 +498,7 @@ class AssembleTest {
 
     @Test @Order(104)
     void testProducedCar_boschBrakeWithMobisSteering_printsFail() throws Exception {
-        // 앞선 조건들이 걸리지 않도록 SEDAN + GM 사용
-        setStack(SEDAN, GM, BOSCH_B, MOBIS);
+        setSpec(CarType.SEDAN, Engine.GM, BrakeSystem.BOSCH, SteeringSystem.MOBIS);
         call("testProducedCar", new Class[]{});
         assertTrue(out().contains("FAIL"));
         assertTrue(out().contains("Bosch"));
@@ -515,7 +506,7 @@ class AssembleTest {
 
     @Test @Order(105)
     void testProducedCar_validCombo_printsPass() throws Exception {
-        setStack(SEDAN, GM, MANDO, BOSCH_S);
+        setSpec(CarType.SEDAN, Engine.GM, BrakeSystem.MANDO, SteeringSystem.BOSCH);
         call("testProducedCar", new Class[]{});
         assertTrue(out().contains("PASS"));
     }
@@ -523,24 +514,21 @@ class AssembleTest {
     // 누락 branch: if/else if 에서 첫 조건 true, 두 번째 조건 false → else 진행
     @Test @Order(106)
     void testProducedCar_suvWithNonToyota_printsPass() throws Exception {
-        // SUV(true) + GM(≠TOYOTA → false): line 247 두 번째 조건 false → PASS
-        setStack(SUV, GM, MANDO, BOSCH_S);
+        setSpec(CarType.SUV, Engine.GM, BrakeSystem.MANDO, SteeringSystem.BOSCH);
         call("testProducedCar", new Class[]{});
         assertTrue(out().contains("PASS"));
     }
 
     @Test @Order(107)
     void testProducedCar_truckWithNonMandoNonWia_printsPass() throws Exception {
-        // TRUCK+GM(≠WIA → false), TRUCK+CONTINENTAL(≠MANDO → false): line 251 두 번째 조건 false → PASS
-        setStack(TRUCK, GM, CONTINENTAL, BOSCH_S);
+        setSpec(CarType.TRUCK, Engine.GM, BrakeSystem.CONTINENTAL, SteeringSystem.BOSCH);
         call("testProducedCar", new Class[]{});
         assertTrue(out().contains("PASS"));
     }
 
     @Test @Order(108)
     void testProducedCar_boschBrakeWithBoschSteering_printsPass() throws Exception {
-        // BOSCH_B(true) + BOSCH_S(1!=1 → false): line 253 두 번째 조건 false → PASS
-        setStack(SEDAN, GM, BOSCH_B, BOSCH_S);
+        setSpec(CarType.SEDAN, Engine.GM, BrakeSystem.BOSCH, SteeringSystem.BOSCH);
         call("testProducedCar", new Class[]{});
         assertTrue(out().contains("PASS"));
     }
@@ -558,7 +546,7 @@ class AssembleTest {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // delay — 예외 없이 완료되는지 확인
+    // delay — 정상 실행 + InterruptedException catch 경로
     // ═══════════════════════════════════════════════════════════════════════════
 
     @Test @Order(120)
@@ -573,7 +561,7 @@ class AssembleTest {
             try {
                 Method m = Assemble.class.getDeclaredMethod("delay", int.class);
                 m.setAccessible(true);
-                m.invoke(null, 30000); // 긴 sleep → 인터럽트로 깨움
+                m.invoke(null, 30000);
             } catch (Exception ignored) {}
         });
         t.start();
@@ -601,33 +589,28 @@ class AssembleTest {
 
     @Test @Order(202)
     void main_outOfRangeAtCarType_showsErrorAndContinues() throws Exception {
-        // 0 은 CarType_Q 에서 유효하지 않음 (1~3 만 허용)
         assertDoesNotThrow(() -> runMain("0\nexit\n"));
         assertTrue(out().contains("ERROR"));
     }
 
     @Test @Order(203)
     void main_backAtEngineStep_returnsToCarType() throws Exception {
-        // 1(Sedan 선택) → step 0→1, 0(뒤로가기) → step 1→0, exit
         assertDoesNotThrow(() -> runMain("1\n0\nexit\n"));
     }
 
     @Test @Order(204)
     void main_backAtRunTest_returnsToCarType() throws Exception {
-        // 전체 선택 후 RunTest 진입 → 0(뒤로가기) → CarType 으로 돌아감 → exit
         assertDoesNotThrow(() -> runMain("1\n1\n1\n1\n0\nexit\n"));
     }
 
     @Test @Order(205)
     void main_fullFlowRun_printsCarRunning() throws Exception {
-        // Sedan + GM + Mando + Bosch → RUN(1)
         assertDoesNotThrow(() -> runMain("1\n1\n1\n1\n1\nexit\n"));
         assertTrue(out().contains("동작됩니다"));
     }
 
     @Test @Order(206)
     void main_fullFlowTest_printsPassResult() throws Exception {
-        // Sedan + GM + Mando + Bosch → Test(2) → PASS
         assertDoesNotThrow(() -> runMain("1\n1\n1\n1\n2\nexit\n"));
         assertTrue(out().contains("PASS"));
     }
