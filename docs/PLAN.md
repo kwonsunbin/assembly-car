@@ -219,7 +219,7 @@ src/main/java/
 | Phase 1 | Enum 도입 (CarType / Engine / BrakeSystem / SteeringSystem) | ✅ 완료 |
 | Phase 2 | 도메인 모델 분리 (CarSpec, int[] stack 제거) | ✅ 완료 |
 | Phase 3 | 유효성 검사 분리 (Strategy Pattern) | ⬜ 대기 |
-| Phase 4 | UI 레이어 분리 (ConsoleRenderer) | ⬜ 대기 |
+| Phase 4 | UI 레이어 분리 (ConsoleRenderer, 직접 출력 0줄) | ✅ 완료 |
 | Phase 5 | 상태 패턴 적용 (State Pattern) | ⬜ 대기 |
 
 ---

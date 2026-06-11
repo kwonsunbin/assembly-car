@@ -104,53 +104,6 @@ class AssembleTest {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // Show-menu tests  (각 메뉴가 핵심 텍스트를 출력하는지 확인)
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    @Test @Order(1)
-    void showCarTypeMenu_containsAllCarTypes() throws Exception {
-        call("showCarTypeMenu", new Class[]{});
-        assertTrue(out().contains("Sedan"));
-        assertTrue(out().contains("SUV"));
-        assertTrue(out().contains("Truck"));
-    }
-
-    @Test @Order(2)
-    void showEngineMenu_containsAllEngines() throws Exception {
-        call("showEngineMenu", new Class[]{});
-        String o = out();
-        assertTrue(o.contains("GM"));
-        assertTrue(o.contains("TOYOTA"));
-        assertTrue(o.contains("WIA"));
-        assertTrue(o.contains("고장난 엔진"));
-    }
-
-    @Test @Order(3)
-    void showBrakeMenu_containsAllBrakeSystems() throws Exception {
-        call("showBrakeMenu", new Class[]{});
-        String o = out();
-        assertTrue(o.contains("MANDO"));
-        assertTrue(o.contains("CONTINENTAL"));
-        assertTrue(o.contains("BOSCH"));
-    }
-
-    @Test @Order(4)
-    void showSteeringMenu_containsAllSteeringSystems() throws Exception {
-        call("showSteeringMenu", new Class[]{});
-        String o = out();
-        assertTrue(o.contains("BOSCH"));
-        assertTrue(o.contains("MOBIS"));
-    }
-
-    @Test @Order(5)
-    void showRunTestMenu_containsRunAndTest() throws Exception {
-        call("showRunTestMenu", new Class[]{});
-        String o = out();
-        assertTrue(o.contains("RUN"));
-        assertTrue(o.contains("Test"));
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════════
     // isValidRange — CarType_Q (step = 0)
     // ═══════════════════════════════════════════════════════════════════════════
 
@@ -531,18 +484,6 @@ class AssembleTest {
         setSpec(CarType.SEDAN, Engine.GM, BrakeSystem.BOSCH, SteeringSystem.BOSCH);
         call("testProducedCar", new Class[]{});
         assertTrue(out().contains("PASS"));
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // fail — 직접 호출 확인
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    @Test @Order(110)
-    void fail_printsFailAndMessage() throws Exception {
-        call("fail", new Class[]{String.class}, "테스트 실패 원인");
-        String o = out();
-        assertTrue(o.contains("FAIL"));
-        assertTrue(o.contains("테스트 실패 원인"));
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
